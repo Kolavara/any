@@ -37,14 +37,24 @@ export default function App() {
         }
       }
     };
-    const onDown = () => setPressing(true);
+    const onDown = (e) => {
+      setPressing(true);
+      const src = e.touches ? e.touches[0] : e;
+      const x = src?.clientX;
+      const y = src?.clientY;
+      if (x != null && y != null) {
+        const id = Date.now() + Math.random();
+        setRipples(prev => [...prev, { id, x, y }]);
+        setTimeout(() => setRipples(prev => prev.filter(r => r.id !== id)), 700);
+      }
+    };
     const onUp = () => setPressing(false);
 
     window.addEventListener('mousemove', onMove);
     window.addEventListener('touchmove', onTouch, { passive: true });
     window.addEventListener('mousedown', onDown);
     window.addEventListener('mouseup', onUp);
-    window.addEventListener('touchstart', onDown, { passive: true });
+    window.addEventListener('touchstart', onDown);
     window.addEventListener('touchend', onUp);
     return () => {
       window.removeEventListener('mousemove', onMove);
@@ -86,13 +96,22 @@ export default function App() {
 
   const progressPct = Math.min(100, Math.round(progress * 100));
 
+  // Mobile tap ripple state
+  const [ripples, setRipples] = useState([]);
+
   return (
     <div className="scene">
       <CosmicCanvas mouseRef={mouseRef} revealProgress={revealProgress} />
 
+      <div className="vignette" />
+
       <Letter visible={letterVisible} />
 
       {showFlash && <div className="reveal-flash" />}
+
+      {ripples.map(r => (
+        <div key={r.id} className="tap-ripple" style={{ left: r.x, top: r.y }} />
+      ))}
 
       {!frostHidden && (
         <FrostCanvas onProgress={handleProgress} onReveal={handleReveal} />

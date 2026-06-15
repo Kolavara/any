@@ -137,19 +137,26 @@ const FrostCanvas = forwardRef(function FrostCanvas({ onProgress, onReveal }, re
 
   const spawnSparks = useCallback((x, y) => {
     const s = stateRef.current;
-    const count = 4 + Math.floor(Math.random() * 5);
+    const count = 5 + Math.floor(Math.random() * 6);
+    const sparkPalettes = [
+      [220, 200, 255], // lavender
+      [180, 220, 255], // ice blue
+      [200, 180, 255], // periwinkle
+      [160, 200, 255], // frost
+      [220, 200, 230], // pink frost
+    ];
     for (let i = 0; i < count; i++) {
       const angle = Math.random() * TAU;
       const speed = 0.8 + Math.random() * 2.5;
-      const hue = 255 + Math.random() * 55;
+      const [r, g, b] = sparkPalettes[Math.floor(Math.random() * sparkPalettes.length)];
       s.sparks.push({
         x, y,
         vx: Math.cos(angle) * speed,
         vy: Math.sin(angle) * speed,
         life: 1,
-        decay: 0.025 + Math.random() * 0.03,
-        size: 1.5 + Math.random() * 2.5,
-        color: `hsl(${hue},90%,75%)`,
+        decay: 0.02 + Math.random() * 0.025,
+        size: 1.5 + Math.random() * 3,
+        color: `rgb(${r},${g},${b})`,
         trail: [],
       });
     }
@@ -210,26 +217,32 @@ const FrostCanvas = forwardRef(function FrostCanvas({ onProgress, onReveal }, re
       const cx = W / 2;
       const cy = H / 2;
       const burstColors = [
-        'hsl(42,95%,70%)',  // gold
-        'hsl(210,90%,72%)', // blue
-        'hsl(280,80%,78%)', // violet
-        'hsl(0,0%,95%)',    // white
-        'hsl(160,70%,72%)', // teal
+        'hsl(42,95%,75%)',   // warm gold
+        'hsl(210,90%,78%)',  // soft blue
+        'hsl(280,80%,82%)',  // lavender
+        'hsl(0,0%,96%)',     // white
+        'hsl(320,70%,80%)',  // pink
+        'hsl(180,60%,78%)',  // teal
+        'hsl(45,90%,85%)',   // champagne
       ];
-      for (let i = 0; i < 90; i++) {
-        const angle = (i / 90) * TAU + Math.random() * 0.15;
-        const speed = 2.5 + Math.random() * 6;
-        s.sparks.push({
-          x: cx + (Math.random() - 0.5) * 40,
-          y: cy + (Math.random() - 0.5) * 40,
-          vx: Math.cos(angle) * speed,
-          vy: Math.sin(angle) * speed - 1,
-          life: 1,
-          decay: 0.006 + Math.random() * 0.01,
-          size: 2 + Math.random() * 3.5,
-          color: burstColors[Math.floor(Math.random() * burstColors.length)],
-          trail: [],
-        });
+      // Ring burst — concentric rings of particles
+      for (let ring = 0; ring < 3; ring++) {
+        const ringCount = 40 + ring * 20;
+        for (let i = 0; i < ringCount; i++) {
+          const angle = (i / ringCount) * TAU + Math.random() * 0.12;
+          const speed = (2 + ring * 1.5) + Math.random() * 5;
+          s.sparks.push({
+            x: cx + (Math.random() - 0.5) * 40,
+            y: cy + (Math.random() - 0.5) * 40,
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed - 1,
+            life: 1,
+            decay: 0.006 + Math.random() * 0.01,
+            size: 2 + Math.random() * 3.5,
+            color: burstColors[Math.floor(Math.random() * burstColors.length)],
+            trail: [],
+          });
+        }
       }
     }
 

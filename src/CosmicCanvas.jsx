@@ -68,6 +68,17 @@ export default function CosmicCanvas({ mouseRef, revealProgress }) {
     const petals = [];
     const MAX_PETALS = 80;
 
+    // Ambient floating particles (firefly-like)
+    const ambientParticles = Array.from({ length: 40 }, () => ({
+      x: Math.random(), y: Math.random(),
+      vx: (Math.random() - 0.5) * 0.0003,
+      vy: (Math.random() - 0.5) * 0.0003,
+      size: Math.random() * 2 + 0.5,
+      twinkle: Math.random() * TAU,
+      speed: Math.random() * 0.002 + 0.001,
+      color: Math.random() < 0.4 ? [245, 201, 122] : [122, 179, 245],
+    }));
+
     function spawnPetal(x, y, isAru) {
       if (petals.length >= MAX_PETALS) return;
       const angle = Math.random() * TAU;
@@ -353,33 +364,81 @@ export default function CosmicCanvas({ mouseRef, revealProgress }) {
       }
     }
 
-    function drawSoul(x, y, color1, color2, size, heartbeat) {
-      const corona = ctx.createRadialGradient(x, y, 0, x, y, size * 3.5);
-      corona.addColorStop(0, color1.replace('1)', '0.25)'));
+    function drawAmbientParticles(W, H, t) {
+      ambientParticles.forEach(p => {
+        p.x += p.vx + Math.sin(t * 0.5 + p.twinkle) * 0.00008;
+        p.y += p.vy + Math.cos(t * 0.4 + p.twinkle) * 0.00008;
+        if (p.x < -0.05) p.x = 1.05;
+        if (p.x > 1.05) p.x = -0.05;
+        if (p.y < -0.05) p.y = 1.05;
+        if (p.y > 1.05) p.y = -0.05;
+        const alpha = 0.15 + 0.25 * Math.sin(t * p.speed * 500 + p.twinkle);
+        if (alpha < 0.05) return;
+        const sx = p.x * W;
+        const sy = p.y * H;
+        const [r, g, b] = p.color;
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        const grad = ctx.createRadialGradient(sx, sy, 0, sx, sy, p.size * 4);
+        grad.addColorStop(0, `rgba(${r},${g},${b},0.8)`);
+        grad.addColorStop(0.4, `rgba(${r},${g},${b},0.3)`);
+        grad.addColorStop(1, 'transparent');
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(sx, sy, p.size * 4, 0, TAU);
+        ctx.fill();
+        ctx.restore();
+      });
+    }
+
+    function drawSoul(x, y, color1, color2, size, heartbeat, t) {
+      // Pulsing outer halo
+      const haloPulse = 1 + 0.2 * Math.sin(t * 2.2);
+      const haloR = size * 4.5 * haloPulse;
+      const corona = ctx.createRadialGradient(x, y, 0, x, y, haloR);
+      corona.addColorStop(0, color1.replace('1)', '0.2)'));
+      corona.addColorStop(0.5, color1.replace('1)', '0.08)'));
       corona.addColorStop(1, 'transparent');
       ctx.save();
       ctx.fillStyle = corona;
       ctx.beginPath();
-      ctx.arc(x, y, size * 3.5, 0, TAU);
+      ctx.arc(x, y, haloR, 0, TAU);
       ctx.fill();
 
-      const mid = ctx.createRadialGradient(x, y, 0, x, y, size * 1.8);
-      mid.addColorStop(0, color1.replace('1)', '0.55)'));
-      mid.addColorStop(0.4, color2.replace('1)', '0.35)'));
+      // Soft middle glow
+      const mid = ctx.createRadialGradient(x, y, 0, x, y, size * 2 * heartbeat);
+      mid.addColorStop(0, color1.replace('1)', '0.5)'));
+      mid.addColorStop(0.35, color2.replace('1)', '0.3)'));
       mid.addColorStop(1, 'transparent');
       ctx.fillStyle = mid;
       ctx.beginPath();
-      ctx.arc(x, y, size * 1.8, 0, TAU);
+      ctx.arc(x, y, size * 2 * heartbeat, 0, TAU);
       ctx.fill();
 
+      // Bright core
       const core = ctx.createRadialGradient(x, y, 0, x, y, size * heartbeat);
       core.addColorStop(0, '#ffffff');
-      core.addColorStop(0.3, color1);
+      core.addColorStop(0.25, color1);
       core.addColorStop(1, color2.replace('1)', '0.4)'));
       ctx.fillStyle = core;
       ctx.beginPath();
       ctx.arc(x, y, size * heartbeat, 0, TAU);
       ctx.fill();
+
+      // Subtle light rays
+      ctx.save();
+      ctx.globalAlpha = 0.06 * heartbeat;
+      ctx.strokeStyle = color1;
+      ctx.lineWidth = 0.5;
+      for (let i = 0; i < 8; i++) {
+        const angle = (i / 8) * TAU + t * 0.2;
+        const rayLen = size * (2.5 + 0.5 * Math.sin(t * 1.5 + i));
+        ctx.beginPath();
+        ctx.moveTo(x + Math.cos(angle) * size * 0.8, y + Math.sin(angle) * size * 0.8);
+        ctx.lineTo(x + Math.cos(angle) * rayLen, y + Math.sin(angle) * rayLen);
+        ctx.stroke();
+      }
+      ctx.restore();
       ctx.restore();
     }
 
@@ -461,8 +520,9 @@ export default function CosmicCanvas({ mouseRef, revealProgress }) {
       drawPetals(dt);
       drawHeartHalo(cx + px * 6, cy + py * 6, a, t, reveal);
       drawVibratingString(aruX, aruY, anuX, anuY, t);
-      drawSoul(aruX, aruY, 'rgba(245,201,122,1)', 'rgba(255,180,80,1)', 7, heartbeat);
-      drawSoul(anuX, anuY, 'rgba(122,179,245,1)', 'rgba(80,140,255,1)', 7, heartbeat);
+      drawAmbientParticles(W, H, t);
+      drawSoul(aruX, aruY, 'rgba(245,201,122,1)', 'rgba(255,180,80,1)', 7, heartbeat, t);
+      drawSoul(anuX, anuY, 'rgba(122,179,245,1)', 'rgba(80,140,255,1)', 7, heartbeat, t);
       drawSoulLabel(aruX, aruY, 'Aru', 'rgba(245,201,122,1)', t, reveal);
       drawSoulLabel(anuX, anuY, 'Anu', 'rgba(122,179,245,1)', t, reveal);
 
